@@ -1,3 +1,4 @@
+
 name: Deploy PISS Company Profile
 
 on:
@@ -31,7 +32,25 @@ jobs:
       - name: Verify website
         run: |
           set -e
-          curl --fail --silent --show-error \
-            --retry 10 --retry-delay 3 --retry-connrefused \
-            http://127.0.0.1:3000/ > /dev/null
-          echo "Deployment successful"
+          echo "Waiting for PISS Compro to become ready..."
+
+          for attempt in $(seq 1 30); do
+            RUNNING=$(docker inspect --format '{{.State.Running}}' piss-compro 2>/dev/null || echo false)
+            PORT=$(docker port piss-compro 3000/tcp 2>/dev/null || true)
+
+            if [ "$RUNNING" = "true" ] && \
+               echo "$PORT" | grep -q '127.0.0.1:3000' && \
+               curl -fsS --connect-timeout 3 --max-time 5 \
+                 http://127.0.0.1:3000/ > /dev/null; then
+              echo "Deployment successful!"
+              exit 0
+            fi
+
+            echo "Attempt $attempt/30: Website not ready. Retrying in 3 seconds..."
+            sleep 3
+          done
+
+          echo "Deployment verification failed!"
+          docker compose ps
+          docker logs --tail 80 piss-compro
+          exit 1
