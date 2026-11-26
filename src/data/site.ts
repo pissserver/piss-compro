@@ -29,7 +29,6 @@ import marketVideoPoster from '../assets/images/market/market-video-poster.jpg'
 import marketVendor from '../assets/images/market/market-vendor.jpg'
 import riceStaple from '../assets/images/market/staple-rice.jpg'
 import vegetables from '../assets/images/market/market-3.jpg'
-import bgVideo from '../assets/videos/bg.mp4'
 import marketStoryVideo from '../assets/videos/video-compro.mp4'
 
 export type NavItem = {
@@ -75,7 +74,6 @@ export const navItems: NavItem[] = [
   { label: 'Video Pasar', href: '#video' },
   { label: 'Komoditas', href: '#komoditas' },
   { label: 'Fasilitas', href: '#fasilitas' },
-  { label: 'Aktivitas', href: '#aktivitas' },
   { label: 'Kontak', href: '#kontak' },
 ]
 
@@ -87,14 +85,12 @@ export const stats: StatsItem[] = [
 ]
 
 export const marketImages = {
-  heroPoster: marketVendor,
   marketTrade: marketPayment,
   videoPoster: marketVideoPoster,
   marketVendor,
   marketStalls,
 } as const
 
-export { bgVideo }
 export { marketStoryVideo }
 
 export const commodityCards: CommodityCard[] = [
@@ -181,7 +177,6 @@ export const activityItems: ActivityItem[] = [
   { title: 'Komoditas daging', caption: 'Pilihan produk daging untuk rantai pasok pangan.', image: freshMeat },
   { title: 'Hasil laut', caption: 'Ikan segar sebagai bagian dari ragam komoditas pasar.', image: freshSeafood },
   { title: 'Bahan pokok', caption: 'Beras dan kebutuhan pokok untuk pasokan masyarakat.', image: riceStaple },
-  { title: 'Perdagangan pasar', caption: 'Ruang niaga yang mempertemukan penjual dan pembeli.', image: marketPayment },
 ]
 
 export const advantages: AdvantageItem[] = [

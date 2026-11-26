@@ -1,13 +1,12 @@
 import {
+    AnimatePresence,
     motion,
     MotionConfig,
     useReducedMotion,
     type Variants,
 } from "framer-motion";
 import {
-    Activity,
     ArrowRight,
-    ArrowUpRight,
     Building2,
     ChevronRight,
     Clock3,
@@ -17,20 +16,17 @@ import {
     MapPin,
     Menu,
     Moon,
-    Pause,
-    Play,
     ShoppingBasket,
     Sparkles,
     Sun,
     X,
     type LucideIcon,
 } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 
 import {
     activityItems,
     advantages,
-    bgVideo,
     commodityCards,
     contactDetails,
     facilityItems,
@@ -57,6 +53,24 @@ const reveal: Variants = {
     },
 };
 
+const revealLeft: Variants = {
+    hidden: { opacity: 0, x: -28 },
+    visible: {
+        opacity: 1,
+        x: 0,
+        transition: { duration: 0.65, ease: [0.16, 1, 0.3, 1] },
+    },
+};
+
+const revealRight: Variants = {
+    hidden: { opacity: 0, x: 28 },
+    visible: {
+        opacity: 1,
+        x: 0,
+        transition: { duration: 0.65, ease: [0.16, 1, 0.3, 1] },
+    },
+};
+
 const heroReveal: Variants = {
     hidden: { opacity: 0, y: 24 },
     visible: {
@@ -74,6 +88,7 @@ const stagger: Variants = {
 };
 
 type Theme = "light" | "dark";
+const THEME_STORAGE_KEY = "pasar-sidotopo-theme-v2";
 
 const navigationIcons: Record<string, LucideIcon> = {
     "#beranda": Home,
@@ -81,9 +96,15 @@ const navigationIcons: Record<string, LucideIcon> = {
     "#video": Film,
     "#komoditas": ShoppingBasket,
     "#fasilitas": Building2,
-    "#aktivitas": Activity,
     "#kontak": MapPin,
 };
+
+const heroHeadlines = [
+    { lead: "Ruang niaga pangan yang ", emphasis: "menghidupi kota." },
+    { lead: "Pusat komoditas segar ", emphasis: "Surabaya." },
+    { lead: "Rantai pasok pangan ", emphasis: "bertemu di Sidotopo." },
+    { lead: "Beragam komoditas, ", emphasis: "satu denyut perdagangan." },
+];
 
 function App() {
     const prefersReducedMotion = useReducedMotion();
@@ -91,16 +112,19 @@ function App() {
     const scrollProgress = useScrollProgress();
     const [isMenuOpen, setIsMenuOpen] = useState(false);
     const [theme, setTheme] = useState<Theme>(() =>
-        window.localStorage.getItem("pasar-sidotopo-theme") === "dark"
-            ? "dark"
-            : "light",
+        window.localStorage.getItem(THEME_STORAGE_KEY) === "light"
+            ? "light"
+            : "dark",
     );
 
     useSmoothScroll(!prefersReducedMotion);
 
     useEffect(() => {
-        window.localStorage.setItem("pasar-sidotopo-theme", theme);
+        window.localStorage.setItem(THEME_STORAGE_KEY, theme);
         document.documentElement.style.colorScheme = theme;
+        document
+            .querySelector('meta[name="theme-color"]')
+            ?.setAttribute("content", theme === "dark" ? "#0c111b" : "#f5f6f8");
     }, [theme]);
 
     return (
@@ -125,11 +149,10 @@ function App() {
                         prefersReducedMotion={Boolean(prefersReducedMotion)}
                     />
                     <AboutSection />
-                    <MarketVideoSection />
-                    <StatsSection />
-                    <CommoditySection />
                     <FacilitySection />
-                    <ActivitySection />
+                    <CommoditySection />
+                    <StatsSection />
+                    <MarketVideoSection />
                     <AdvantageSection />
                     <ContactSection />
                 </main>
@@ -242,121 +265,162 @@ function HeroSection({
 }: {
     prefersReducedMotion: boolean;
 }) {
-    const [shouldPlayVideo, setShouldPlayVideo] = useState(false);
-    const videoRef = useRef<HTMLVideoElement>(null);
+    const [imageIndex, setImageIndex] = useState(0);
+    const [headlineIndex, setHeadlineIndex] = useState(0);
+    const activeHeadline = heroHeadlines[headlineIndex];
+    const fullHeroTitle = `${activeHeadline.lead}${activeHeadline.emphasis}`;
+    const [typedTitle, setTypedTitle] = useState(
+        prefersReducedMotion
+            ? `${heroHeadlines[0].lead}${heroHeadlines[0].emphasis}`
+            : "",
+    );
+    const activeImage = activityItems[imageIndex];
 
     useEffect(() => {
-        const desktopViewport = window.matchMedia("(min-width: 640px)");
-        const updateVideoPlayback = () => {
-            const shouldPlay = desktopViewport.matches && !prefersReducedMotion;
-            setShouldPlayVideo(shouldPlay);
-            if (!shouldPlay) videoRef.current?.pause();
-        };
+        if (prefersReducedMotion) {
+            setHeadlineIndex(0);
+            setTypedTitle(`${heroHeadlines[0].lead}${heroHeadlines[0].emphasis}`);
+            return undefined;
+        }
 
-        updateVideoPlayback();
-        desktopViewport.addEventListener("change", updateVideoPlayback);
+        setHeadlineIndex(0);
+        setTypedTitle("");
+        let currentHeadlineIndex = 0;
+        let currentLength = 0;
+        let isDeleting = false;
+        let pauseTicks = 0;
+        const timer = window.setInterval(() => {
+            if (pauseTicks > 0) {
+                pauseTicks -= 1;
+                return;
+            }
 
-        return () =>
-            desktopViewport.removeEventListener("change", updateVideoPlayback);
+            const headline = heroHeadlines[currentHeadlineIndex];
+            const headlineText = `${headline.lead}${headline.emphasis}`;
+            currentLength += isDeleting ? -1 : 1;
+            setTypedTitle(headlineText.slice(0, currentLength));
+            if (currentLength === headlineText.length) {
+                isDeleting = true;
+                pauseTicks = 24;
+            } else if (currentLength === 0) {
+                isDeleting = false;
+                currentHeadlineIndex =
+                    (currentHeadlineIndex + 1) % heroHeadlines.length;
+                setHeadlineIndex(currentHeadlineIndex);
+                pauseTicks = 8;
+            }
+        }, 45);
+
+        return () => window.clearInterval(timer);
     }, [prefersReducedMotion]);
+
+    useEffect(() => {
+        if (prefersReducedMotion || activityItems.length < 2) {
+            return undefined;
+        }
+
+        const timer = window.setInterval(() => {
+            setImageIndex((currentIndex) => (currentIndex + 1) % activityItems.length);
+        }, 5500);
+
+        return () => window.clearInterval(timer);
+    }, [prefersReducedMotion]);
+
+    useEffect(() => {
+        if (prefersReducedMotion) return;
+
+        const nextImage = new Image();
+        nextImage.src = activityItems[(imageIndex + 1) % activityItems.length].image;
+    }, [imageIndex, prefersReducedMotion]);
 
     return (
         <section id="beranda" className="hero-shell">
-            <video
-                ref={videoRef}
-                className="hero-video"
-                autoPlay={shouldPlayVideo}
-                muted
-                loop
-                playsInline
-                preload="none"
-                poster={marketImages.heroPoster}
-            >
-                <source src={bgVideo} type="video/mp4" />
-            </video>
-            <div className="hero-gradient" />
-
+            <AnimatePresence initial={false}>
+                <motion.img
+                    key={activeImage.image}
+                    className="hero-background"
+                    src={activeImage.image}
+                    alt=""
+                    aria-hidden="true"
+                    fetchPriority={imageIndex === 0 ? "high" : "auto"}
+                    initial={
+                        prefersReducedMotion
+                            ? false
+                            : { opacity: 0, x: 18, scale: 1.015 }
+                    }
+                    animate={{ opacity: 1, x: 0, scale: 1 }}
+                    exit={
+                        prefersReducedMotion
+                            ? undefined
+                            : { opacity: 0, x: -18, scale: 1.015 }
+                    }
+                    transition={{
+                        duration: prefersReducedMotion ? 0 : 0.85,
+                        ease: [0.16, 1, 0.3, 1],
+                    }}
+                />
+            </AnimatePresence>
+            <div className="hero-backdrop" aria-hidden="true" />
             <div className="hero-content">
                 <motion.div
+                    className="hero-copy"
                     initial="hidden"
                     animate="visible"
                     variants={stagger}
                 >
                     <motion.p
                         variants={heroReveal}
-                        className="eyebrow eyebrow-light"
+                        className="eyebrow"
                     >
-                        Pasar Induk Surabaya Sidotopo
+                        Sentra pangan · Surabaya
                     </motion.p>
                     <motion.h1 variants={heroReveal} className="hero-title">
-                        Kota bergerak.
-                        <br />
-                        <em>Pangan menemukan jalannya.</em>
+                        <span aria-hidden="true">
+                            {typedTitle.slice(0, activeHeadline.lead.length)}
+                            <em>{typedTitle.slice(activeHeadline.lead.length)}</em>
+                            {!prefersReducedMotion && (
+                                <span className="typing-caret" />
+                            )}
+                        </span>
+                        <span className="sr-only">{fullHeroTitle}</span>
                     </motion.h1>
                     <motion.p variants={heroReveal} className="hero-subtitle">
-                        Dari hasil bumi hingga kebutuhan pokok, Pasar Induk
-                        Sidotopo merangkai cerita perdagangan yang menghidupi
-                        Surabaya—setiap hari, sepanjang waktu.
+                        Mempertemukan pedagang, pemasok, dan masyarakat dalam
+                        satu ekosistem perdagangan yang aktif setiap hari.
                     </motion.p>
 
                     <motion.div variants={heroReveal} className="hero-actions">
                         <a href="#komoditas" className="primary-button">
-                            Jelajahi ekosistem
+                            Jelajahi komoditas
                             <ArrowRight size={16} />
                         </a>
                         <a href="#tentang" className="secondary-button">
-                            Kisah Sidotopo
+                            Tentang Sidotopo
                         </a>
                     </motion.div>
 
-                    <motion.div variants={heroReveal} className="hero-badges">
-                        <span>
-                            <Clock3 size={14} aria-hidden="true" /> Perdagangan
-                            24 jam
-                        </span>
-                        <span>
-                            <Sparkles size={14} aria-hidden="true" /> Lebih dari
-                            100 komoditas
-                        </span>
+                    <motion.div variants={heroReveal} className="hero-proof">
+                        <span><Clock3 size={15} aria-hidden="true" /> Perdagangan 24 jam</span>
+                        <span><Sparkles size={15} aria-hidden="true" /> 100+ jenis komoditas</span>
                     </motion.div>
                 </motion.div>
 
                 <motion.div
-                    initial={{ opacity: 0, x: 30 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ duration: 0.9, delay: 0.2 }}
-                    className="floating-panel"
+                    initial={{ opacity: 0, y: 22 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.75, delay: 0.2 }}
+                    className="hero-visual"
                 >
-                    <div className="floating-panel-head">
-                        <div>
-                            <p className="mini-label">Sidotopo in numbers</p>
-                            <h2>Ekosistem niaga</h2>
-                        </div>
-                        <span className="panel-icon">
-                            <ArrowUpRight size={18} />
-                        </span>
+                    <div className="hero-image-label">
+                        <span className="hero-label-dot" />
+                        Aktivitas pasar · Sidotopo
                     </div>
-
-                    <div className="floating-list">
-                        <div className="floating-row">
-                            <span>Pedagang aktif</span>
-                            <strong>120+</strong>
-                        </div>
-                        <div className="floating-row">
-                            <span>Blok perdagangan</span>
-                            <strong>10+</strong>
-                        </div>
-                        <div className="floating-row">
-                            <span>Lapak tersedia</span>
-                            <strong>600+</strong>
-                        </div>
+                    <div className="hero-stat-card">
+                        <span>Ekosistem aktif</span>
+                        <strong>120+</strong>
+                        <span>pedagang beraktivitas</span>
                     </div>
                 </motion.div>
-            </div>
-
-            <div className="scroll-prompt">
-                <span>Scroll</span>
-                <span className="scroll-indicator" />
             </div>
         </section>
     );
@@ -370,35 +434,31 @@ function AboutSection() {
                     initial="hidden"
                     whileInView="visible"
                     viewport={{ once: true, amount: 0.2 }}
-                    variants={reveal}
+                    variants={revealLeft}
                 >
-                    <p className="eyebrow">Tentang Pasar</p>
+                    <p className="eyebrow">Tentang Sidotopo</p>
                     <h2 className="section-title">
-                        Dibangun oleh aktivitas. Dihidupkan oleh banyak cerita.
+                        Simpul perdagangan yang menghidupi kota.
                     </h2>
                     <div className="rich-text">
                         <p>
-                            Sidotopo adalah salah satu simpul perdagangan pangan
-                            Surabaya—kawasan yang mempertemukan pedagang,
-                            pemasok, dan pembeli dalam ritme yang terus
-                            bergerak. Setiap hari, beragam komoditas menemukan
-                            jalannya dari lapak menuju kebutuhan kota.
-                        </p>
-                        <p>
-                            Dengan lebih dari 120 pedagang aktif, 10 blok, dan
-                            600 lapak, pasar ini tumbuh sebagai rumah bagi
-                            ekosistem usaha yang beragam. Bukan sekadar tempat
-                            transaksi—Sidotopo adalah bagian dari kehidupan
-                            kota.
+                            Pasar Induk Surabaya Sidotopo mempertemukan pedagang,
+                            pemasok, dan pembeli dalam satu kawasan niaga yang
+                            bergerak sepanjang hari. Dari hasil bumi hingga
+                            kebutuhan pokok, komoditas mengalir untuk memenuhi
+                            kebutuhan kota.
                         </p>
                     </div>
+                    <a href="#fasilitas" className="text-link">
+                        Kenali kawasan kami <ArrowRight size={15} aria-hidden="true" />
+                    </a>
                 </motion.div>
 
                 <motion.div
-                    initial={{ opacity: 0, scale: 0.96 }}
-                    whileInView={{ opacity: 1, scale: 1 }}
+                    initial="hidden"
+                    whileInView="visible"
                     viewport={{ once: true, amount: 0.2 }}
-                    transition={{ duration: 0.8 }}
+                    variants={revealRight}
                     className="image-stack"
                 >
                     <div className="glow-orb glow-orb-left" />
@@ -479,7 +539,7 @@ function MarketVideoSection() {
 
 function StatsSection() {
     return (
-        <section className="section-shell warm-shell">
+        <section className="section-shell proof-shell">
             <div className="wrap">
                 <motion.div
                     initial="hidden"
@@ -488,10 +548,16 @@ function StatsSection() {
                     variants={reveal}
                     className="stats-heading"
                 >
-                    <p className="eyebrow dark-text">Skala Sidotopo</p>
-                    <h2 className="section-title">
-                        Angka yang bercerita tentang denyut kota.
-                    </h2>
+                    <div>
+                        <p className="eyebrow eyebrow-light">Skala Sidotopo</p>
+                        <h2 className="section-title">
+                            Fondasi kuat untuk perdagangan yang terus bergerak.
+                        </h2>
+                    </div>
+                    <p className="stats-summary">
+                        Ruang dan jaringan usaha yang menopang kebutuhan pangan
+                        Surabaya setiap hari.
+                    </p>
                 </motion.div>
 
                 <div className="stats-grid">
@@ -529,9 +595,9 @@ function CommoditySection() {
                     className="section-header"
                 >
                     <div>
-                        <p className="eyebrow">Komoditas</p>
+                        <p className="eyebrow">Komoditas utama</p>
                         <h2 className="section-title">
-                            Ragam pangan. Satu tujuan: menghidupi kota.
+                            Banyak pilihan, satu ekosistem perdagangan.
                         </h2>
                     </div>
                     <p className="section-summary">
@@ -557,26 +623,25 @@ function CommoditySection() {
                             >
                                 <div className="commodity-image-wrap">
                                     <img
-                                        src={card.image}
-                                        alt={card.title}
                                         className="commodity-image"
+                                        src={card.image}
+                                        alt={`${card.title} di Pasar Induk Surabaya Sidotopo`}
                                         loading="lazy"
                                     />
                                 </div>
-                                <div className="commodity-overlay" />
-                                <div className="commodity-badge">
-                                    <Icon size={14} />
-                                    {card.badge}
+                                <div className="commodity-card-top">
+                                    <span className="commodity-icon">
+                                        <Icon size={22} aria-hidden="true" />
+                                    </span>
+                                    <span className="commodity-badge">{card.badge}</span>
                                 </div>
                                 <div className="commodity-content">
-                                    <div className="commodity-head">
-                                        <h3>{card.title}</h3>
-                                        <span>
-                                            <ChevronRight size={18} />
-                                        </span>
-                                    </div>
+                                    <h3>{card.title}</h3>
                                     <p>{card.description}</p>
                                 </div>
+                                <span className="commodity-arrow" aria-hidden="true">
+                                    <ChevronRight size={18} />
+                                </span>
                             </motion.article>
                         );
                     })}
@@ -591,10 +656,10 @@ function FacilitySection() {
         <section id="fasilitas" className="section-shell sage-shell">
             <div className="content-grid facility-grid">
                 <motion.div
-                    initial={{ opacity: 0, y: 34 }}
-                    whileInView={{ opacity: 1, y: 0 }}
+                    initial="hidden"
+                    whileInView="visible"
                     viewport={{ once: true, amount: 0.2 }}
-                    transition={{ duration: 0.7 }}
+                    variants={revealLeft}
                     className="facility-visual"
                 >
                     <img
@@ -615,7 +680,7 @@ function FacilitySection() {
                     initial="hidden"
                     whileInView="visible"
                     viewport={{ once: true, amount: 0.2 }}
-                    variants={reveal}
+                    variants={revealRight}
                 >
                     <p className="eyebrow">Fasilitas</p>
                     <h2 className="section-title">
@@ -652,82 +717,6 @@ function FacilitySection() {
                         <ArrowRight size={16} />
                     </a>
                 </motion.div>
-            </div>
-        </section>
-    );
-}
-
-function ActivitySection() {
-    const [isPaused, setIsPaused] = useState(false);
-
-    return (
-        <section id="aktivitas" className="section-shell light-shell">
-            <div className="wrap">
-                <motion.div
-                    initial="hidden"
-                    whileInView="visible"
-                    viewport={{ once: true, amount: 0.2 }}
-                    variants={reveal}
-                    className="section-header compact-header activity-header"
-                >
-                    <div>
-                        <p className="eyebrow">Aktivitas pasar</p>
-                        <h2 className="section-title">
-                            Setiap sudut punya cerita. Setiap hari punya ritme.
-                        </h2>
-                    </div>
-                    <button
-                        type="button"
-                        className="marquee-toggle"
-                        onClick={() => setIsPaused(!isPaused)}
-                        aria-label={
-                            isPaused
-                                ? "Putar kembali galeri aktivitas"
-                                : "Jeda galeri aktivitas"
-                        }
-                        aria-pressed={isPaused}
-                    >
-                        {isPaused ? (
-                            <Play size={16} aria-hidden="true" />
-                        ) : (
-                            <Pause size={16} aria-hidden="true" />
-                        )}
-                        <span>{isPaused ? "Putar" : "Jeda"}</span>
-                    </button>
-                </motion.div>
-
-                <div
-                    className={`marquee-wrap ${isPaused ? "marquee-paused" : ""}`}
-                >
-                    <div className="marquee-track">
-                        {[...activityItems, ...activityItems].map(
-                            (item, index) => (
-                                <motion.article
-                                    key={`${item.title}-${index}`}
-                                    initial={{ opacity: 0, x: 30 }}
-                                    whileInView={{ opacity: 1, x: 0 }}
-                                    viewport={{ once: true, amount: 0.25 }}
-                                    transition={{
-                                        delay: index * 0.04,
-                                        duration: 0.55,
-                                    }}
-                                    className="activity-card"
-                                >
-                                    <img
-                                        src={item.image}
-                                        alt={item.title}
-                                        className="activity-image"
-                                        loading="lazy"
-                                    />
-                                    <div className="activity-body">
-                                        <h3>{item.title}</h3>
-                                        <p>{item.caption}</p>
-                                    </div>
-                                </motion.article>
-                            ),
-                        )}
-                    </div>
-                </div>
             </div>
         </section>
     );
@@ -787,9 +776,12 @@ function ContactSection() {
                     initial="hidden"
                     whileInView="visible"
                     viewport={{ once: true, amount: 0.2 }}
-                    variants={reveal}
+                    variants={revealLeft}
+                    className="contact-copy"
                 >
-                    <p className="eyebrow eyebrow-light">Kontak</p>
+                    <p className="eyebrow eyebrow-light">
+                        <MapPin size={14} aria-hidden="true" /> Terhubung dengan Sidotopo
+                    </p>
                     <h2 className="section-title contact-title">
                         Ada ruang untuk tumbuh bersama.
                     </h2>
@@ -803,7 +795,7 @@ function ContactSection() {
                             ({ icon: Icon, label, value, href }) => (
                                 <div key={label} className="contact-item">
                                     <span className="contact-icon">
-                                        <Icon size={19} />
+                                        <Icon size={19} aria-hidden="true" />
                                     </span>
                                     <div>
                                         <p className="mini-label light-label">
@@ -829,17 +821,18 @@ function ContactSection() {
 
                     <a
                         href={`mailto:${marketEmail}`}
-                        className="primary-button tertiary-button"
+                        className="primary-button contact-button"
                     >
-                        Hubungi Kami
-                        <ArrowRight size={16} />
+                        Hubungi tim kami
+                        <ArrowRight size={16} aria-hidden="true" />
                     </a>
                 </motion.div>
 
                 <motion.div
-                    initial={{ opacity: 0, scale: 0.98 }}
-                    whileInView={{ opacity: 1, scale: 1 }}
+                    initial="hidden"
+                    whileInView="visible"
                     viewport={{ once: true, amount: 0.2 }}
+                    variants={revealRight}
                     className="map-card"
                 >
                     <div className="map-image-wrap">
@@ -851,9 +844,8 @@ function ContactSection() {
                     </div>
                     <div className="map-meta">
                         <div>
-                            <p className="mini-label light-label">
-                                <MapPin size={13} aria-hidden="true" /> Temukan
-                                kami
+                            <p className="mini-label map-label">
+                                <MapPin size={13} aria-hidden="true" /> Kunjungi kami
                             </p>
                             <p className="map-title">
                                 Pasar Induk Surabaya Sidotopo
@@ -866,9 +858,10 @@ function ContactSection() {
                             className="map-action"
                         >
                             <MapPin size={15} aria-hidden="true" />
-                            Maps
+                            Buka peta
                         </a>
                     </div>
+                    <p className="map-address">{marketAddress}</p>
                 </motion.div>
             </div>
         </section>
