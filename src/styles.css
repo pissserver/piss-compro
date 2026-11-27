@@ -1627,7 +1627,22 @@ button:focus-visible {
   }
 
   .nav-bar {
+    gap: 0.6rem;
     min-height: 4.5rem;
+  }
+
+  .brand-wrap {
+    min-width: 0;
+    flex: 1 1 auto;
+  }
+
+  .brand-name {
+    min-width: 0;
+  }
+
+  .theme-toggle,
+  .menu-button {
+    flex: 0 0 auto;
   }
 
   .site-header-scrolled .nav-bar {
@@ -1646,7 +1661,7 @@ button:focus-visible {
     grid-template-columns: minmax(0, 1fr);
     gap: 0;
     padding-top: 7rem;
-    padding-bottom: 7rem;
+    padding-bottom: 3rem;
   }
 
   .hero-content > div:first-child {
@@ -1665,12 +1680,12 @@ button:focus-visible {
   }
 
   .hero-visual {
-    position: absolute;
-    right: 0;
-    bottom: 1rem;
+    position: relative;
     width: 100%;
-    min-height: 4rem;
-    height: 4rem;
+    min-height: 0;
+    height: auto;
+    justify-content: flex-end;
+    margin-top: 1.25rem;
     pointer-events: none;
   }
 
@@ -1679,8 +1694,9 @@ button:focus-visible {
   }
 
   .hero-stat-card {
-    right: 0;
-    bottom: 0;
+    position: relative;
+    right: auto;
+    bottom: auto;
   }
 
   .stats-heading {
@@ -1732,8 +1748,8 @@ button:focus-visible {
   }
 
   .hero-stat-card {
-    right: 0.1rem;
-    bottom: 0;
+    right: auto;
+    bottom: auto;
   }
 
   .section-title {
@@ -1793,6 +1809,13 @@ button:focus-visible {
   .footer-bottom-inner {
     align-items: flex-start;
     flex-direction: column;
+  }
+}
+
+@media (max-width: 380px) {
+  .brand-name {
+    max-width: 7rem;
+    font-size: 0.52rem;
   }
 }
 
